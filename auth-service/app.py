@@ -345,9 +345,9 @@ def auth_page():
 
 @app.route('/health')
 def health():
-    return jsonify({'status': 'ok', 'service': 'tempo-id-auth'})
+    return jsonify({'status': 'ok', 'service': 'keystroke-auth'})
 
 
 if __name__ == '__main__':
-    print(f'Tempo ID Auth Service — http://localhost:5001 (debug={config.DEBUG})')
+    print(f'keystroke-auth — http://localhost:5001 (debug={config.DEBUG})')
     app.run(host='0.0.0.0', port=5001, debug=config.DEBUG)

@@ -1,8 +1,8 @@
-# Tempo ID - Start All Services
+# keystroke-auth - Start All Services
 # Run from the project root: .\start.ps1
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "     TEMPO ID - Starting Services      " -ForegroundColor Cyan
+Write-Host "   keystroke-auth - Starting Services  " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

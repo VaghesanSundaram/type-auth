@@ -1,4 +1,4 @@
-# Tempo ID
+# keystroke-auth
 
 Keystroke dynamics auth. It verifies identity by how you type, not just what you type.
 
