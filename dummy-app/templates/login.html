@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | SecureApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="/" class="logo">SecureApp</a>
+            <div class="nav-links">
+                <a href="/signup" class="btn-primary">Sign Up</a>
+            </div>
+        </nav>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Login with your keystroke pattern</p>
+
+            {% if error %}
+            <div class="error-message">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" action="/login">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your username"
+                        autocomplete="username" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Continue with Keystroke Auth
+                </button>
+            </form>
+
+            <div class="auth-links">
+                Don't have an account? <a href="/signup">Sign up</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

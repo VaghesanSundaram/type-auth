@@ -1,0 +1,19 @@
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# env files (contain generated secret keys)
+.env
+
+# database
+*.db
+*.db-shm
+*.db-wal

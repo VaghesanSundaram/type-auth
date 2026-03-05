@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo ID | Profile Enrollment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-content">
+                <div class="header">
+                    <h1>Create Profile</h1>
+                    <p class="subtitle">Enrollment for <span class="username">{{ username }}</span></p>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Progress</span>
+                        <span>Sample <span class="progress-current">0</span> / 3</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="status info">
+                    <span>Instructions:</span>
+                    <span>Type the phrase below to record your unique rhythm.</span>
+                </div>
+
+                <div class="keyphrase-container">
+                    <div class="keyphrase" id="keyphrase"></div>
+                </div>
+
+                <div class="instructions">
+                    Type naturally. Mistakes will reset the phrase. Press <kbd>Esc</kbd> to cancel.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/static/keystroke.js"></script>
+    <script>
+        const CONFIG = {
+            userId: "{{ user_id }}",
+            username: "{{ username }}",
+            callback: "{{ callback }}",
+            keyphrase: "{{ keyphrase }}",
+            token: "{{ token }}"
+        };
+
+        let samplesCollected = 0;
+        let keystroke = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderKeyphrase(CONFIG.keyphrase, '#keyphrase');
+            startCapture();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && confirm('Cancel enrollment and return?')) {
+                    window.location.href = CONFIG.callback + '?status=cancelled';
+                }
+            });
+        });
+
+        function startCapture() {
+            keystroke = new KeystrokeCapture(CONFIG.keyphrase, {
+                onCharacter: (index) => markCharTyped(index),
+                onMistake: (expected) => {
+                    flashError(keystroke.currentIndex);
+                    showStatus(`Mistake! Expected "${expected === ' ' ? 'space' : expected}". Resetting...`, 'error');
+                    setTimeout(() => showStatus('Try again. Type naturally.', 'info'), 1500);
+                },
+                onComplete: async (timings) => await submitSample(timings),
+                onReset: () => resetKeyphrase()
+            });
+        }
+
+        async function submitSample(timings) {
+            showLoading(true);
+
+            try {
+                const response = await fetch('/api/enroll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: CONFIG.userId,
+                        token: CONFIG.token,
+                        timings: timings
+                    })
+                });
+
+                const data = await response.json();
+                showLoading(false);
+
+                if (response.status === 401) {
+                    showStatus('Session expired. Please refresh and try again.', 'error');
+                    keystroke.pause();
+                    return;
+                }
+
+                if (data.success) {
+                    if (data.complete) {
+                        showSuccess(data.auth_code);
+                    } else {
+                        samplesCollected = data.samples_collected || samplesCollected + 1;
+                        updateProgress(samplesCollected, 3);
+                        showStatus(`Sample ${samplesCollected} recorded. ${3 - samplesCollected} remaining.`, 'success');
+                        document.querySelectorAll('.char').forEach(el => {
+                            el.className = 'char flash-success';
+                        });
+                        setTimeout(() => {
+                            showStatus('Type the phrase again.', 'info');
+                            resetKeyphrase();
+                            keystroke.reset();
+                        }, 500);
+                    }
+                } else {
+                    showStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+                    keystroke.reset();
+                    resetKeyphrase();
+                }
+            } catch (err) {
+                showLoading(false);
+                showStatus('Network error. Please try again.', 'error');
+                console.error(err);
+                keystroke.reset();
+                resetKeyphrase();
+            }
+        }
+
+        function showSuccess(authCode) {
+            document.querySelector('.card').innerHTML = `
+                <div class="card-content">
+                    <div class="result-card success">
+                        <div class="result-icon">✓</div>
+                        <h2 class="result-title">Profile Created</h2>
+                        <p class="result-message">Your unique biometric pattern has been secured.</p>
+                        <button class="btn btn-primary" onclick="window.location.href='${CONFIG.callback}?status=success&code=${authCode}'">
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+
+</html>

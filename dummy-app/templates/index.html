@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureApp | Keystroke Authentication Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="/" class="logo">SecureApp</a>
+            <div class="nav-links">
+                {% if user %}
+                <a href="/dashboard">Dashboard</a>
+                <a href="/logout">Logout</a>
+                {% else %}
+                <a href="/login">Login</a>
+                <a href="/signup" class="btn-primary">Sign Up</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <section class="hero">
+            <h1>Authentication<br>Reimagined</h1>
+            <p>Experience the future of security with keystroke dynamics. Your unique typing pattern is your password.
+            </p>
+            <div class="hero-buttons">
+                {% if user %}
+                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                {% else %}
+                <a href="/signup" class="btn btn-primary">Get Started</a>
+                <a href="/login" class="btn btn-secondary">I have an account</a>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🔐</div>
+                <h3>Behavioral Biometrics</h3>
+                <p>Your typing rhythm is as unique as your fingerprint. We analyze the timing between your keystrokes
+                    for authentication.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Seamless Experience</h3>
+                <p>No passwords to remember. Just type naturally and we'll recognize you by how you type, not what you
+                    type.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3>Impossible to Steal</h3>
+                <p>Unlike passwords, your typing pattern can't be stolen or shared. It's intrinsically tied to your
+                    physical behavior.</p>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

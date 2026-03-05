@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SecureApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="/" class="logo">SecureApp</a>
+            <div class="nav-links">
+                <form method="POST" action="/logout" style="display:inline;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-link">Logout</button>
+                </form>
+            </div>
+        </nav>
+
+        <section class="dashboard">
+            <div class="dashboard-header">
+                <div class="welcome-text">
+                    <h1>🎉 Welcome!</h1>
+                    <p>You've successfully authenticated using keystroke dynamics.</p>
+                </div>
+                <form method="POST" action="/logout">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-secondary">Logout</button>
+                </form>
+            </div>
+
+            {% if error %}
+            <div class="error-message" style="margin-bottom: 2rem;">{{ error }}</div>
+            {% endif %}
+
+            <div class="dashboard-card">
+                <h2>Authentication Details</h2>
+                <p>This protected area was accessed using behavioral biometric authentication. Your unique typing
+                    pattern was verified against your stored profile.</p>
+
+                <div class="auth-badge">
+                    ✓ Authenticated via
+                    {% if user.auth_method == 'fallback' %}
+                    Passphrase Fallback
+                    {% else %}
+                    Keystroke Dynamics
+                    {% endif %}
+                </div>
+
+                {% if user.auth_method == 'fallback' %}
+                <div
+                    style="margin-top: 1.5rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border: 1px solid var(--accent-primary); border-radius: 10px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--accent-primary);">Re-train Keystroke
+                        Profile</h3>
+                    <p style="font-size: 0.9rem; margin-bottom: 1rem;">Since you logged in with a passphrase, you can
+                        re-enroll your keystrokes to update your biometric profile.</p>
+                    <form method="POST" action="/re-enroll" style="display:inline;">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary"
+                            style="padding: 0.75rem 1.5rem; font-size: 0.9rem;">Start Re-enrollment</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.875rem;">
+                    User ID: {{ user.user_id }}
+                </p>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

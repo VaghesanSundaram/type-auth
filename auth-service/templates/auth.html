@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo ID | Verify Identity</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card" id="auth-card">
+            <div class="card-content">
+                <div class="header">
+                    <h1>Verify Identity</h1>
+                    <p class="subtitle">Secure login for <span class="username">{{ username }}</span></p>
+                </div>
+
+                <div class="status info" id="status">
+                    <span>Target Phrase:</span>
+                    <span>Type the text below naturally.</span>
+                </div>
+
+                <div class="keyphrase-container">
+                    <div class="keyphrase" id="keyphrase"></div>
+                </div>
+
+                <div class="instructions">
+                    Press <kbd>Esc</kbd> to cancel authentication.
+                </div>
+
+                <div class="fallback-link">
+                    <a href="#" onclick="showFallback(); return false;">Trouble typing? Switch to password fallback</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/static/keystroke.js"></script>
+    <script>
+        const CONFIG = {
+            userId: "{{ user_id }}",
+            username: "{{ username }}",
+            callback: "{{ callback }}",
+            keyphrase: "{{ keyphrase }}",
+            token: "{{ token }}"
+        };
+
+        let keystroke = null;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 3;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderKeyphrase(CONFIG.keyphrase, '#keyphrase');
+            startCapture();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && confirm('Cancel authentication and return?')) {
+                    window.location.href = CONFIG.callback + '?status=cancelled';
+                }
+            });
+        });
+
+        function startCapture() {
+            keystroke = new KeystrokeCapture(CONFIG.keyphrase, {
+                onCharacter: (index) => markCharTyped(index),
+                onMistake: (expected) => {
+                    flashError(keystroke.currentIndex);
+                    showStatus(`Mistake! Expected "${expected === ' ' ? 'space' : expected}". Resetting...`, 'error');
+                    setTimeout(() => showStatus('Type the phrase below naturally.', 'info'), 1500);
+                },
+                onComplete: async (timings) => await authenticate(timings),
+                onReset: () => resetKeyphrase()
+            });
+        }
+
+        async function authenticate(timings) {
+            showLoading(true);
+            attempts++;
+
+            try {
+                const response = await fetch('/api/authenticate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: CONFIG.userId,
+                        token: CONFIG.token,
+                        timings: timings
+                    })
+                });
+
+                const data = await response.json();
+                showLoading(false);
+
+                if (response.status === 429) {
+                    showStatus(data.error || 'Too many attempts. Please wait.', 'error');
+                    keystroke.pause();
+                    return;
+                }
+
+                if (response.status === 401) {
+                    showStatus('Session expired. Please refresh and try again.', 'error');
+                    keystroke.pause();
+                    return;
+                }
+
+                if (!response.ok) {
+                    showStatus(data.error || `Server error (${response.status})`, 'error');
+                    keystroke.reset();
+                    resetKeyphrase();
+                    return;
+                }
+
+                if (data.authenticated) {
+                    showResult(true, data.auth_code);
+                } else if (attempts >= MAX_ATTEMPTS) {
+                    showResult(false, null, true);
+                } else {
+                    showStatus(`Match failed. ${MAX_ATTEMPTS - attempts} attempts remaining.`, 'error');
+                    setTimeout(() => {
+                        showStatus('Type the phrase below naturally.', 'info');
+                        resetKeyphrase();
+                        keystroke.reset();
+                    }, 2000);
+                }
+            } catch (err) {
+                showLoading(false);
+                showStatus('Could not reach server. Please try again.', 'error');
+                console.error(err);
+                keystroke.reset();
+                resetKeyphrase();
+            }
+        }
+
+        function showResult(success, authCode, noMoreAttempts = false) {
+            keystroke.destroy();
+            const card = document.getElementById('auth-card');
+
+            if (success) {
+                card.innerHTML = `
+                    <div class="card-content">
+                        <div class="result-card success">
+                            <div class="result-icon">✓</div>
+                            <h2 class="result-title">Identity Verified</h2>
+                            <p class="result-message">Biometric pattern matched.</p>
+                            <button class="btn btn-primary" onclick="completeAuth('${authCode}')">
+                                Continue to App
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <div class="card-content">
+                        <div class="result-card failure">
+                            <div class="result-icon">!</div>
+                            <h2 class="result-title">Verification Failed</h2>
+                            <p class="result-message">${noMoreAttempts ? 'Maximum attempts reached.' : 'Pattern did not match.'}</p>
+                            <div class="btn-group">
+                                ${noMoreAttempts ? `
+                                    <button class="btn btn-secondary" onclick="showFallback()">
+                                        Use Password Fallback
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-primary" onclick="location.reload()">
+                                        Try Again
+                                    </button>
+                                `}
+                                <button class="btn btn-secondary" onclick="window.location.href='${CONFIG.callback}?status=failed'">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function completeAuth(authCode) {
+            window.location.href = CONFIG.callback + '?status=success&code=' + authCode;
+        }
+
+        function showFallback() {
+            if (keystroke) keystroke.destroy();
+            const card = document.getElementById('auth-card');
+
+            card.innerHTML = `
+                <div class="card-content">
+                    <div class="header">
+                        <h1>Password Fallback</h1>
+                        <p class="subtitle">Enter your passphrase</p>
+                    </div>
+
+                    <form onsubmit="submitFallback(event)" style="margin-top: 1.5rem;">
+                        <input type="password" id="passphrase-input"
+                            placeholder="Enter your passphrase..."
+                            autocomplete="current-password">
+
+                        <div class="status hidden" id="fallback-status"></div>
+
+                        <button type="submit" class="btn btn-primary">
+                            Verify Passphrase
+                        </button>
+                    </form>
+
+                    <div class="fallback-link">
+                        <a href="#" onclick="location.reload(); return false;">← Back to Biometric Auth</a>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('passphrase-input').focus();
+        }
+
+        async function submitFallback(event) {
+            event.preventDefault();
+            const passphrase = document.getElementById('passphrase-input').value;
+            const statusEl = document.getElementById('fallback-status');
+
+            showLoading(true);
+
+            try {
+                const response = await fetch('/api/passphrase-fallback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: CONFIG.username,
+                        passphrase: passphrase
+                    })
+                });
+
+                const data = await response.json();
+                showLoading(false);
+
+                if (response.status === 429) {
+                    statusEl.textContent = data.error || 'Too many attempts. Please wait.';
+                    statusEl.className = 'status error';
+                    statusEl.style.display = 'flex';
+                    return;
+                }
+
+                if (data.authenticated) {
+                    window.location.href = CONFIG.callback + '?status=success&code=' + data.auth_code + '&method=fallback';
+                } else {
+                    statusEl.textContent = 'Incorrect passphrase.';
+                    statusEl.className = 'status error';
+                    statusEl.style.display = 'flex';
+                }
+            } catch (err) {
+                showLoading(false);
+                statusEl.textContent = 'Could not reach server.';
+                statusEl.className = 'status error';
+                statusEl.style.display = 'flex';
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+
+</html>

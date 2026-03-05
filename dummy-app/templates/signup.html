@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | SecureApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="/" class="logo">SecureApp</a>
+            <div class="nav-links">
+                <a href="/login">Login</a>
+            </div>
+        </nav>
+    </div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>Create Account</h1>
+            <p class="subtitle">Set up your keystroke authentication profile</p>
+
+            {% if error %}
+            <div class="error-message">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" action="/signup">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="username">Choose a Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter a unique username"
+                        autocomplete="username" required minlength="3">
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Create & Start Enrollment
+                </button>
+            </form>
+
+            <div class="auth-links">
+                Already have an account? <a href="/login">Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
